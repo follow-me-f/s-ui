@@ -2,10 +2,7 @@ package config
 
 import (
 	_ "embed"
-	"fmt"
 	"os"
-	"path/filepath"
-	"runtime"
 	"strings"
 )
 
@@ -45,24 +42,4 @@ func GetLogLevel() LogLevel {
 
 func IsDebug() bool {
 	return os.Getenv("SUI_DEBUG") == "true"
-}
-
-func GetDBFolderPath() string {
-	dbFolderPath := os.Getenv("SUI_DB_FOLDER")
-	if dbFolderPath == "" {
-		dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-		if err != nil {
-			// Cross-platform fallback path
-			if runtime.GOOS == "windows" {
-				return "C:\\Program Files\\s-ui\\db"
-			}
-			return "/usr/local/s-ui/db"
-		}
-		dbFolderPath = filepath.Join(dir, "db")
-	}
-	return dbFolderPath
-}
-
-func GetDBPath() string {
-	return fmt.Sprintf("%s/%s.db", GetDBFolderPath(), GetName())
 }

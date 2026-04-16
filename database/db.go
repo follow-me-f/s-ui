@@ -3,14 +3,12 @@ package database
 import (
 	"encoding/json"
 	"os"
-	"path"
-	"strings"
 	"time"
 
 	"github.com/alireza0/s-ui/config"
 	"github.com/alireza0/s-ui/database/model"
 
-	"gorm.io/driver/sqlite"
+	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -33,12 +31,7 @@ func initUser() error {
 	return nil
 }
 
-func OpenDB(dbPath string) error {
-	dir := path.Dir(dbPath)
-	err := os.MkdirAll(dir, 01740)
-	if err != nil {
-		return err
-	}
+func OpenDB() error {
 
 	var gormLogger logger.Interface
 
@@ -51,12 +44,13 @@ func OpenDB(dbPath string) error {
 	c := &gorm.Config{
 		Logger: gormLogger,
 	}
-	sep := "?"
-	if strings.Contains(dbPath, "?") {
-		sep = "&"
+
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		dsn = "dbuser:d5cb5d0ff776@tcp(10.0.0.222:3306)/v?charset=utf8mb4&parseTime=True&loc=Local"
 	}
-	dsn := dbPath + sep + "_busy_timeout=10000&_journal_mode=WAL"
-	db, err = gorm.Open(sqlite.Open(dsn), c)
+	var err error
+	db, err = gorm.Open(mysql.Open(dsn), c)
 	if err != nil {
 		return err
 	}
@@ -75,8 +69,8 @@ func OpenDB(dbPath string) error {
 	return nil
 }
 
-func InitDB(dbPath string) error {
-	err := OpenDB(dbPath)
+func InitDB() error {
+	err := OpenDB()
 	if err != nil {
 		return err
 	}

@@ -2,29 +2,16 @@ package migration
 
 import (
 	"fmt"
-	"log"
-	"os"
-
 	"github.com/alireza0/s-ui/config"
-
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
+	"github.com/alireza0/s-ui/database"
+	"log"
 )
 
 func MigrateDb() {
 	// void running on first install
-	path := config.GetDBPath()
-	_, err := os.Stat(path)
-	if err != nil {
-		println("Database not found")
-		return
-	}
+	db := database.GetDB()
 
-	db, err := gorm.Open(sqlite.Open(path))
-	if err != nil {
-		log.Fatal(err)
-		return
-	}
+	var err error
 	tx := db.Begin()
 	defer func() {
 		if err == nil {

@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/alireza0/s-ui/config"
 	"github.com/alireza0/s-ui/database"
 	"github.com/alireza0/s-ui/service"
 
@@ -16,7 +15,7 @@ import (
 )
 
 func resetSetting() {
-	err := database.InitDB(config.GetDBPath())
+	err := database.InitDB()
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -32,14 +31,13 @@ func resetSetting() {
 }
 
 func updateSetting(port int, path string, subPort int, subPath string) {
-	err := database.InitDB(config.GetDBPath())
+	err := database.InitDB()
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
 	settingService := service.SettingService{}
-
 	if port > 0 {
 		err := settingService.SetPort(port)
 		if err != nil {
@@ -75,7 +73,7 @@ func updateSetting(port int, path string, subPort int, subPath string) {
 }
 
 func showSetting() {
-	err := database.InitDB(config.GetDBPath())
+	err := database.InitDB()
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -161,7 +159,7 @@ func getPublicIP() string {
 }
 
 func getPanelURI() {
-	err := database.InitDB(config.GetDBPath())
+	err := database.InitDB()
 	if err != nil {
 		fmt.Println(err)
 		return

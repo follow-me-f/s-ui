@@ -34,7 +34,7 @@ func (a *APP) Init() error {
 
 	a.initLog()
 
-	err := database.InitDB(config.GetDBPath())
+	err := database.InitDB()
 	if err != nil {
 		return err
 	}

@@ -242,18 +242,6 @@ func (s *ConfigService) Save(obj string, act string, data json.RawMessage, initU
 		return nil, err
 	}
 
-	dt := time.Now().Unix()
-	err = tx.Create(&model.Changes{
-		DateTime: dt,
-		Actor:    loginUser,
-		Key:      obj,
-		Action:   act,
-		Obj:      data,
-	}).Error
-	if err != nil {
-		return nil, err
-	}
-
 	LastUpdate = time.Now().Unix()
 
 	return objs, nil
@@ -266,7 +254,7 @@ func (s *ConfigService) CheckChanges(lu string) (bool, error) {
 	if LastUpdate == 0 {
 		db := database.GetDB()
 		var count int64
-		err := db.Model(model.Changes{}).Where("date_time > " + lu).Count(&count).Error
+		err := db.Model(model.Changes{}).Where("date_time > ?", lu).Count(&count).Error
 		if err == nil {
 			LastUpdate = time.Now().Unix()
 		}

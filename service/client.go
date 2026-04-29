@@ -274,19 +274,31 @@ func (s *ClientService) updateLinksWithFixedInbounds(tx *gorm.DB, clients []*mod
 }
 
 func (s *ClientService) UpdateClientsOnInboundAdd(tx *gorm.DB, initIds string, inboundId uint, hostname string) error {
-	clientIds := strings.Split(initIds, ",")
-	var clients []model.Client
-	err := tx.Model(model.Client{}).Where("id in ?", clientIds).Find(&clients).Error
-	if err != nil {
-		return err
-	}
+
 	var inbound model.Inbound
-	err = tx.Model(model.Inbound{}).Preload("Tls").Where("id = ?", inboundId).Find(&inbound).Error
+	err := tx.Model(model.Inbound{}).Preload("Tls").Where("id = ?", inboundId).Find(&inbound).Error
 	if err != nil {
 		return err
 	}
+
+	clientIds := strings.Split(initIds, ",")
+	rows, err := tx.Model(&model.Client{}).Where("id IN ?", clientIds).Rows()
+	if err != nil {
+		return err
+	}
+
+	var clients []model.Client
+	for rows.Next() {
+		var client model.Client
+		err := tx.ScanRows(rows, &client)
+		if err != nil {
+			return err
+		}
+		clients = append(clients, client)
+	}
+	rows.Close()
+
 	for _, client := range clients {
-		// Add inbounds
 		var clientInbounds []uint
 		json.Unmarshal(client.Inbounds, &clientInbounds)
 		clientInbounds = append(clientInbounds, inboundId)
@@ -320,25 +332,31 @@ func (s *ClientService) UpdateClientsOnInboundAdd(tx *gorm.DB, initIds string, i
 			return err
 		}
 	}
+
 	return nil
 }
 
 func (s *ClientService) UpdateClientsOnInboundDelete(tx *gorm.DB, id uint, tag string) error {
-	var clientIds []uint
-	err := tx.Raw("SELECT id FROM clients WHERE JSON_CONTAINS(inbounds, JSON_ARRAY(?))", id).Scan(&clientIds).Error
+
+	rows, err := tx.Model(&model.Client{}).
+		Where("JSON_CONTAINS(inbounds, JSON_ARRAY(?))", id).
+		Rows()
 	if err != nil {
 		return err
 	}
-	if len(clientIds) == 0 {
-		return nil
-	}
+
 	var clients []model.Client
-	err = tx.Model(model.Client{}).Where("id IN ?", clientIds).Find(&clients).Error
-	if err != nil {
-		return err
+	for rows.Next() {
+		var client model.Client
+		err := tx.ScanRows(rows, &client)
+		if err != nil {
+			return err
+		}
+		clients = append(clients, client)
 	}
+	rows.Close()
+
 	for _, client := range clients {
-		// Delete inbounds
 		var clientInbounds, newClientInbounds []uint
 		json.Unmarshal(client.Inbounds, &clientInbounds)
 		for _, clientInbound := range clientInbounds {
@@ -367,26 +385,29 @@ func (s *ClientService) UpdateClientsOnInboundDelete(tx *gorm.DB, id uint, tag s
 			return err
 		}
 	}
+
 	return nil
 }
 
 func (s *ClientService) UpdateLinksByInboundChange(tx *gorm.DB, inbounds *[]model.Inbound, hostname string, oldTag string) error {
-	var err error
+
 	for _, inbound := range *inbounds {
-		var clientIds []uint
-		err = tx.Raw("SELECT id FROM clients WHERE JSON_CONTAINS(inbounds, JSON_ARRAY(?))", inbound.Id).Scan(&clientIds).Error
-		if err != nil {
-			return err
-		}
-		if len(clientIds) == 0 {
-			continue
-		}
+
 		var clients []model.Client
-		err = tx.Model(model.Client{}).Where("id IN ?", clientIds).Find(&clients).Error
+		rows, err := tx.Model(&model.Client{}).
+			Where("JSON_CONTAINS(inbounds, JSON_ARRAY(?))", inbound.Id).
+			Rows()
+
 		if err != nil {
 			return err
 		}
-		for _, client := range clients {
+		for rows.Next() {
+			var client model.Client
+			err := tx.ScanRows(rows, &client)
+			if err != nil {
+				return err
+			}
+
 			var clientLinks, newClientLinks []map[string]string
 			json.Unmarshal(client.Links, &clientLinks)
 			newLinks := util.LinkGenerator(client.Config, &inbound, hostname)
@@ -407,12 +428,17 @@ func (s *ClientService) UpdateLinksByInboundChange(tx *gorm.DB, inbounds *[]mode
 			if err != nil {
 				return err
 			}
-			err = tx.Save(&client).Error
-			if err != nil {
+			clients = append(clients, client)
+		}
+		rows.Close()
+
+		for _, c := range clients {
+			if err := tx.Save(&c).Error; err != nil {
 				return err
 			}
 		}
 	}
+
 	return nil
 }
 

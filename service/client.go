@@ -200,11 +200,15 @@ func (s *ClientService) Save(tx *gorm.DB, act string, data json.RawMessage, host
 			return nil, err
 		}
 	case "delByName":
-		var name string
-		err = json.Unmarshal(data, &name)
-		if err != nil {
-			return nil, err
+
+		var req struct {
+			Name string `json:"name"`
 		}
+		err = json.Unmarshal(data, &req)
+		if err != nil {
+			req.Name = string(data)
+		}
+		name := req.Name
 
 		var client model.Client
 		err = tx.Where("name = ?", name).First(&client).Error
